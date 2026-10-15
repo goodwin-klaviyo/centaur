@@ -13,9 +13,15 @@ crossterm.workspace = true
 eyre.workspace = true
 futures-util.workspace = true
 ratatui.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 tokio = { workspace = true, features = ["io-std", "io-util", "macros", "rt-multi-thread", "sync", "time"] }
 uuid.workspace = true
+url.workspace = true
+
+[[bin]]
+name = "centaur-session-inspect"
+path = "src/bin/inspect.rs"
 
 [lints]
 workspace = true

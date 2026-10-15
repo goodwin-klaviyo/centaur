@@ -516,8 +516,10 @@ dependencies = [
  "eyre",
  "futures-util",
  "ratatui",
+ "serde",
  "serde_json",
  "tokio",
+ "url",
  "uuid",
 ]
 

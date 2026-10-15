@@ -40,7 +40,7 @@ pub struct CreateSessionResponse {
     pub unavailable_requested_persona_id: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SessionContextResponse {
     pub thread_key: ThreadKey,
     /// The chat surface the agent is operating on: `slack`, `discord`, `linear`,
@@ -58,13 +58,13 @@ pub struct SessionContextResponse {
     pub github: Option<GithubThreadContext>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct SlackThreadContext {
     pub channel_id: String,
     pub thread_ts: String,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DiscordThreadContext {
     pub guild_id: String,
     pub channel_id: String,
@@ -72,7 +72,7 @@ pub struct DiscordThreadContext {
     pub thread_id: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct LinearThreadContext {
     pub issue_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -81,7 +81,7 @@ pub struct LinearThreadContext {
     pub agent_session_id: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct GithubThreadContext {
     pub owner: String,
     pub repo: String,

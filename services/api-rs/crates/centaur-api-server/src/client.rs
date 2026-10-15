@@ -11,7 +11,7 @@ use thiserror::Error;
 
 use crate::types::{
     AppendMessagesRequest, AppendMessagesResponse, CreateSessionRequest, ExecuteSessionRequest,
-    ExecuteSessionResponse,
+    ExecuteSessionResponse, SessionContextResponse,
 };
 
 #[derive(Clone, Debug)]
@@ -83,9 +83,31 @@ impl CentaurClient {
         thread_key: &ThreadKey,
         after_event_id: i64,
     ) -> Result<SseEventStream, ClientError> {
+        self.stream_events_for(thread_key, after_event_id, None)
+            .await
+    }
+
+    pub async fn get_session_context(
+        &self,
+        thread_key: &ThreadKey,
+    ) -> Result<SessionContextResponse, ClientError> {
+        let response = self.client.get(self.session_url(thread_key)).send().await?;
+        let response = ensure_response_success(response).await?;
+        Ok(response.json().await?)
+    }
+
+    pub async fn stream_events_for(
+        &self,
+        thread_key: &ThreadKey,
+        after_event_id: i64,
+        execution_id: Option<&str>,
+    ) -> Result<SseEventStream, ClientError> {
         let events_url = format!(
-            "{}/events?after_event_id={after_event_id}",
-            self.session_url(thread_key)
+            "{}/events?after_event_id={after_event_id}{}",
+            self.session_url(thread_key),
+            execution_id
+                .map(|value| format!("&execution_id={}", urlencoding::encode(value)))
+                .unwrap_or_default()
         );
         let response = self.client.get(&events_url).send().await?;
         let response = ensure_response_success(response).await?;
@@ -139,4 +161,34 @@ pub enum ClientError {
     EventStream(String),
     #[error("bearer token cannot be represented as an HTTP header")]
     InvalidBearerToken,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{CentaurClient, ClientError};
+    use centaur_session_core::ThreadKey;
+    use std::str::FromStr;
+    use tokio::{io::AsyncWriteExt, net::TcpListener};
+
+    #[tokio::test]
+    async fn session_context_read_surfaces_api_authorization_errors() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            socket
+                .write_all(
+                    b"HTTP/1.1 403 Forbidden\r\ncontent-length: 2\r\nconnection: close\r\n\r\n{}",
+                )
+                .await
+                .unwrap();
+        });
+        let client = CentaurClient::new(format!("http://{address}"));
+        let thread_key = ThreadKey::from_str("slack:C123:123.456").unwrap();
+
+        let error = client.get_session_context(&thread_key).await.unwrap_err();
+
+        assert!(matches!(error, ClientError::Api { status, .. } if status.as_u16() == 403));
+        server.await.unwrap();
+    }
 }
